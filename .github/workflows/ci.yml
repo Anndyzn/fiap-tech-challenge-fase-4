@@ -1,0 +1,88 @@
+
+name: CI - Tech Challenge Fase 4
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend - Build e Testes
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: blog_fiap_f4_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blog_fiap_f4_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: blog_fiap_f4_test
+      NODE_ENV: test
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Configurar JWT de teste
+        run: echo "JWT_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Compilar backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Verificar tipos dos testes
+        working-directory: backend
+        run: npx tsc --project tests/tsconfig.json
+
+      - name: Executar testes
+        working-directory: backend
+        run: npm test
+
+  mobile:
+    name: Mobile - TypeScript
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Instalar dependencias
+        working-directory: mobile
+        run: npm ci
+
+      - name: Verificar TypeScript
+        working-directory: mobile
+        run: npx tsc --noEmit
